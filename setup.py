@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="cortado_marker",  # Updated package name
-    version="0.1.0",
+    version="0.1.1",
     author="Musaddiq Lodi",
     author_email="lodimk2@vcu.edu",
     description="CORTADO: hill Climbing Optimization foR cell-Type specific mArker gene DiscOvery",
