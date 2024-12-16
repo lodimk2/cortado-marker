@@ -1,0 +1,5 @@
+build
+cortado.egg-info
+dist
+sc_cortado.egg-info
+.DS_Store
