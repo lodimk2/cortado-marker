@@ -5,7 +5,7 @@ Cortado package
 A brief description of the package.
 """
 
-__version__ = '0.1.22'
+__version__ = '0.1.1'
 __author__ = 'Musaddiq K Lodi'
 __license__ = 'MIT'
 
@@ -19,6 +19,6 @@ from .utils import *  # Import any specific functions you need
 # Optional: initialization code
 def init():
     # Code to be executed when the package is imported
-    print("Cortado package initialized!")
+    print("Thank you for using CORTADO: Hill Climbing Optimization for Cell-Type Specific Marker Gene Discovery. For questions, comments or concerns, please reach out to Musaddiq Lodi @ lodimk2@vcu.edu.")
 
 init()
