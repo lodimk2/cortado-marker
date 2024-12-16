@@ -1,8 +1,8 @@
 from setuptools import setup
 
 setup(
-    name="sc-cortado",  # Updated package name
-    version="0.1.22",
+    name="cortado-marker",  # Updated package name
+    version="0.1.0",
     author="Musaddiq Lodi",
     author_email="lodimk2@vcu.edu",
     description="CORTADO: hill Climbing Optimization foR cell-Type specific mArker gene DiscOvery",
@@ -16,7 +16,7 @@ setup(
     ],
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/sc-cortado",  # Updated to new repo URL
+    url="https://github.com/yourusername/cortado-marker",  # Updated to new repo URL
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
