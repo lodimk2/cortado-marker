@@ -1,0 +1,22 @@
+Metadata-Version: 2.1
+Name: cortado-marker
+Version: 0.1.0
+Summary: CORTADO: hill Climbing Optimization foR cell-Type specific mArker gene DiscOvery
+Home-page: https://github.com/yourusername/cortado-marker
+Author: Musaddiq Lodi
+Author-email: lodimk2@vcu.edu
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.20.0
+Requires-Dist: matplotlib>=3.4.0
+Requires-Dist: scipy>=1.6.0
+Requires-Dist: pandas>=1.3.0
+Requires-Dist: scikit-learn>=0.24.0
+Requires-Dist: scanpy>=1.9.1
+
+# CORTADO: hill Climbing Optimization foR cell-Type specific mArker gene DiscOvery
+

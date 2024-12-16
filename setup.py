@@ -16,7 +16,7 @@ setup(
     ],
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/cortado-marker",  # Updated to new repo URL
+    url="https://github.com/lodimk2/cortado-marker",  # Updated to new repo URL
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

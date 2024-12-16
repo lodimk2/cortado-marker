@@ -1,0 +1,8 @@
+LICENSE
+README.md
+setup.py
+cortado_marker.egg-info/PKG-INFO
+cortado_marker.egg-info/SOURCES.txt
+cortado_marker.egg-info/dependency_links.txt
+cortado_marker.egg-info/requires.txt
+cortado_marker.egg-info/top_level.txt
