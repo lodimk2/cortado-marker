@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name="cortado-marker",  # Updated package name
+    name="cortado_marker",  # Updated package name
     version="0.1.0",
     author="Musaddiq Lodi",
     author_email="lodimk2@vcu.edu",
