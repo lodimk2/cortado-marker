@@ -1,8 +1,8 @@
 Metadata-Version: 2.1
-Name: cortado-marker
-Version: 0.1.0
+Name: cortado_marker
+Version: 0.1.2
 Summary: CORTADO: hill Climbing Optimization foR cell-Type specific mArker gene DiscOvery
-Home-page: https://github.com/yourusername/cortado-marker
+Home-page: https://github.com/lodimk2/cortado-marker
 Author: Musaddiq Lodi
 Author-email: lodimk2@vcu.edu
 Classifier: Programming Language :: Python :: 3

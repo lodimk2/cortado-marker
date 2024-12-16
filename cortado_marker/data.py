@@ -1,6 +1,6 @@
 import argparse
 import pandas as pd
-import scipy as sc
+import scanpy as sc
 import numpy as np
 import random
 import math
@@ -9,6 +9,7 @@ from sklearn.preprocessing import MinMaxScaler
 from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
 import os
+from anndata import AnnData  # Ensure this is explicitly imported
 
 def load_data(exp_path, metadata_path, metadata_label_column, tenX=False, preprocess=False):
     """
