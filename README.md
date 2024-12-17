@@ -58,9 +58,6 @@ load_data(exp_path, metadata_path, metadata_label_column, tenX=False, preprocess
 
 Next, we calculate the marker gene scores and the cosine similarity vectors for each gene. There are important paramters for customization here as well. 
 
-```
-#### Code
-
 ```python
 # Parameters
 adata = <AnnData object>  # Input single-cell dataset
