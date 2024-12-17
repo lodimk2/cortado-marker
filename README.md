@@ -81,4 +81,38 @@ filtered_corr_matrix = filtered_corr_matrix.reindex(index=marker_scores.index, c
 
 ```
 
+### Obtain Marker Genes 
 
+Finally, we obtain the marker genes for a given cluster using the ```python cortado.run_stochastic_hill_climbing()``` function. 
+
+```python
+# Parameters
+how_many = 20  # Number of marker genes to select
+max_iterations = 1000  # Maximum number of iterations for the optimization
+gamma = 0.5  # Weight for the cosine similarity penalty
+idle_limit = 50  # Idle limit for stopping if no improvement
+lambda1 = 1.0  # Weight for the differential expression score
+lambda2 = 1.0  # Weight for non-redundancy (cosine similarity penalty)
+lambda3 = 0.5  # Penalty for selecting too many genes
+mode = 0  0 for unconstrained, 1 for constrained
+
+# Run stochastic hill climbing for the current cluster
+best_solution, best_value = cortado.run_stochastic_hill_climbing(
+    marker_scores, filtered_corr_matrix, how_many=how_many, max_iterations=max_iterations, 
+    gamma=gamma, idle_limit=idle_limit, lambda1=lambda1, lambda2=lambda2, 
+    lambda3=lambda3, mode=mode, plot_filename=""
+)
+
+# Output the results
+print(f"Best Solution: {best_solution}")
+print(f"Best Value: {best_value}")
+```
+
+
+## Citation 
+
+If you have used CORTADO, please consider citing our manuscript. 
+
+## Support 
+
+For any questions, comments or concerns, please reach out to Musaddiq Lodi @ lodimk2@vcu.edu
