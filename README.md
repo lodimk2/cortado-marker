@@ -38,4 +38,22 @@ To import CORTADO in your Python code, use the following import statement:
 
 ## Tutorial 
 
+### Load Data
+
+CORTADO has a custom load function, ``` load_data() ```. The load data requires some specific parameters:
+
+```python
+load_data(exp_path, metadata_path, metadata_label_column, tenX=False, preprocess=True) 
+
+#### Required Parameters:
+- **`exp_path`** *(str)*: Path to the gene expression matrix file (e.g., counts matrix in CSV format).  
+- **`metadata_path`** *(str)*: Path to the metadata file (e.g., cell annotations in CSV format).  
+- **`metadata_label_column`** *(str)*: The column in the metadata file containing group labels.  
+
+#### Optional Parameters:
+- **`tenX`** *(bool, default=False)*: Set to `True` if the input data is in 10X format.  
+- **`preprocess`** *(bool, default=True)*: Whether to preprocess the data (log transformation and scaling).  
+```
+
+
 
