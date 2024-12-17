@@ -1,4 +1,4 @@
 # CORTADO: hill Climbing Optimization foR cell-Type specific mArker gene DiscOvery
 
-<img src="https://github.com/user-attachments/assets/f9570001-6137-44b6-ac73-989ff8ae1673" width="400" height="600" alt="12162024 Flowchart">
 
+![github_flowchart](https://github.com/user-attachments/assets/8fec5bc5-fd99-47cb-a566-cbf1c69e1370)
