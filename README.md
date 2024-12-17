@@ -90,7 +90,6 @@ Finally, we obtain the marker genes for a given cluster using the ```python cort
 ```python
 # Parameters
 how_many = 20  # Number of marker genes to select
-n_genes = if mode = 1, select n_genes number of markers (constrained)
 max_iterations = 1000  # Maximum number of iterations for the optimization
 gamma = 0.5  # Weight for the cosine similarity penalty
 idle_limit = 50  # Idle limit for stopping if no improvement
