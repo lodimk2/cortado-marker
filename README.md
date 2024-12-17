@@ -106,6 +106,12 @@ best_solution, best_value = cortado.run_stochastic_hill_climbing(
 # Output the results
 print(f"Best Solution: {best_solution}")
 print(f"Best Value: {best_value}")
+
+# Extract gene names where best_solution equals 1
+selected_genes = marker_scores.index[best_solution == 1].tolist()
+        
+# Store the selected genes for this cluster
+all_selected_genes[target_cluster] = selected_genes
 ```
 
 
