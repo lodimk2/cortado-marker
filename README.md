@@ -43,7 +43,7 @@ To import CORTADO in your Python code, use the following import statement:
 CORTADO has a custom load function, ``` load_data() ```. The load data requires some specific parameters:
 
 ```python
-adata = load_data(exp_path, metadata_path, metadata_label_column, tenX=False, preprocess=True) 
+adata = cortado.load_data(exp_path, metadata_path, metadata_label_column, tenX=False, preprocess=True) 
 
 #### Required Parameters:
 - **`exp_path`** *(str)*: Path to the gene expression matrix file (e.g., counts matrix in CSV format).  
