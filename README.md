@@ -32,7 +32,7 @@ CORTADO can be installed using the PyPi installer (pip)
 
 ``` pip install cortado-marker ```. 
 
-To import CORTADO in your Python code, use the following import statement
+To import CORTADO in your Python code, use the following import statement:
 
 ``` import cortado-marker as cortado ```
 
