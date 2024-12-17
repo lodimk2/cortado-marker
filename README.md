@@ -89,12 +89,13 @@ Finally, we obtain the marker genes for a given cluster using the ```python cort
 ```python
 # Parameters
 how_many = 20  # Number of marker genes to select
+n_genes = if mode = 1, select n_genes number of markers (constrained)
 max_iterations = 1000  # Maximum number of iterations for the optimization
 gamma = 0.5  # Weight for the cosine similarity penalty
 idle_limit = 50  # Idle limit for stopping if no improvement
-lambda1 = 1.0  # Weight for the differential expression score
-lambda2 = 1.0  # Weight for non-redundancy (cosine similarity penalty)
-lambda3 = 0.5  # Penalty for selecting too many genes
+lambda1 = 0.9  # Weight for the differential expression score
+lambda2 = 0.1  # Weight for non-redundancy (cosine similarity penalty)
+lambda3 = 1 - (lambda1 + lambda2)  # Penalty for selecting too many genes
 mode = 0  0 for unconstrained, 1 for constrained
 
 # Run stochastic hill climbing for the current cluster
