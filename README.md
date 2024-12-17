@@ -26,7 +26,16 @@ CORTADO performs marker gene selection through three main steps:
      - Gene Set Enrichment Analyses (GSEA).
 
 
+## Installation
+
+CORTADO can be installed using the PyPi installer (pip). 
+
+``` pip install cortado-marker ```. 
+
+To import CORTADO in your Python code, import as 
+
+``` import cortado-marker as cortado ```
+
 ## Tutorial 
 
-### Load Data 
 
