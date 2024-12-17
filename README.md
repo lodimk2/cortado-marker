@@ -28,11 +28,11 @@ CORTADO performs marker gene selection through three main steps:
 
 ## Installation
 
-CORTADO can be installed using the PyPi installer (pip). 
+CORTADO can be installed using the PyPi installer (pip)
 
 ``` pip install cortado-marker ```. 
 
-To import CORTADO in your Python code, import as 
+To import CORTADO in your Python code, use the following import statement
 
 ``` import cortado-marker as cortado ```
 
