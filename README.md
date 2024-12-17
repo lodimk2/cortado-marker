@@ -1,7 +1,5 @@
 # CORTADO: hill Climbing Optimization foR cell-Type specific mArker gene DiscOvery
-![Python](https://img.shields.io/badge/Python-3.8+-3776AB?logo=python&logoColor=white)  
-![License](https://img.shields.io/badge/License-MIT-green)  
-![Support](https://img.shields.io/badge/Support-Contact-blue)  
+![Python](https://img.shields.io/badge/Python-3.8+-3776AB?logo=python&logoColor=white) ![License](https://img.shields.io/badge/License-MIT-green) ![Support](https://img.shields.io/badge/Support-Contact-blue)  
 
 
 ![github_flowchart](https://github.com/user-attachments/assets/8fec5bc5-fd99-47cb-a566-cbf1c69e1370)
