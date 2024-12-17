@@ -54,6 +54,34 @@ load_data(exp_path, metadata_path, metadata_label_column, tenX=False, preprocess
 - **`tenX`** *(bool, default=False)*: Set to `True` if the input data is in 10X format.  
 - **`preprocess`** *(bool, default=True)*: Whether to preprocess the data (log transformation and scaling).  
 ```
+### Calculate Marker Gene Scores and Cosine Similarity 
 
+Next, we calculate the marker gene scores and the cosine similarity vectors for each gene. There are important paramters for customization here as well. 
+
+```
+#### Code
+
+```python
+# Parameters
+adata = <AnnData object>  # Input single-cell dataset
+target_cluster = "Cluster_1"  # The name or label of the target cluster
+n_genes = 50  # Number of top marker genes to select
+p_val_threshold = 0.05  # P-value threshold for filtering marker genes
+use_raw = True  # Whether to use raw gene expression data
+
+# Calculate marker gene scores for the current cluster
+marker_scores = cortado.calc_marker_gene_score(adata, target_cluster, n_genes, p_val_threshold, use_raw=use_raw)
+print(f"Calculated marker scores for cluster {target_cluster}")
+
+# Calculate gene correlation within the current cluster
+sim_scores = cortado.gene_correlation_within_cluster(target_cluster, adata)
+print(f"Calculated gene correlation for cluster {target_cluster}")
+
+# Filter correlation matrix for the marker genes
+filtered_genes = marker_scores.index
+filtered_corr_matrix = sim_scores.loc[filtered_genes, filtered_genes]
+filtered_corr_matrix = filtered_corr_matrix.reindex(index=marker_scores.index, columns=marker_scores.index)
+
+```
 
 
