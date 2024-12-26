@@ -121,6 +121,22 @@ all_selected_genes[target_cluster] = selected_genes
 
 If you have used CORTADO, please consider citing our manuscript. 
 
+'''
+Lodi, M., Clark, L., Roy, S., & Ghosh, P. (2024). CORTADO: Hill Climbing Optimization for Cell-Type Specific Marker Gene Discovery. bioRxiv. https://doi.org/10.1101/2024.12.23.630040
+'''
+
+'''
+@article{CORTADO_biorxiv,
+  author    = {Musaddiq Lodi and Leiliani Clark and Satyaki Roy and Preetam Ghosh},
+  title     = {CORTADO: Hill Climbing Optimization for Cell-Type Specific Marker Gene Discovery},
+  journal   = {bioRxiv},
+  year      = {2024},
+  doi       = {10.1101/2024.12.23.630040},
+  url       = {https://doi.org/10.1101/2024.12.23.630040}
+}
+
+'''
+
 ## Support 🛠️  
 For any questions, comments, or concerns, please reach out to:  
 **Musaddiq Lodi** 📧  
