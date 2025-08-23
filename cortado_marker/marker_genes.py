@@ -5,7 +5,7 @@ from sklearn.preprocessing import MinMaxScaler
 from scipy.sparse import csr_matrix
 import numpy as np 
 
-def calc_marker_gene_score(adata, target_cluster, n_genes, p_val_threshold, use_raw=True, n_hvg=2000):
+def calc_marker_gene_score(adata, target_cluster, n_genes, p_val_threshold, cluster_column, use_raw=True, n_hvg=2000):
     """
     Calculate marker gene scores for a target cluster.
     
@@ -41,7 +41,7 @@ def calc_marker_gene_score(adata, target_cluster, n_genes, p_val_threshold, use_
     # Now run differential expression on filtered data
     sc.tl.rank_genes_groups(
         adata_work, 
-        'clust_assign', 
+        cluster_column, 
         groups=[str(target_cluster)],
         reference='rest',
         method='wilcoxon',
