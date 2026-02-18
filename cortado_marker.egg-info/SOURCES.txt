@@ -3,6 +3,7 @@ README.md
 setup.py
 cortado_marker/__init__.py
 cortado_marker/data.py
+cortado_marker/em.py
 cortado_marker/evaluate.py
 cortado_marker/hill_climbing.py
 cortado_marker/marker_genes.py

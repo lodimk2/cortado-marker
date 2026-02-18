@@ -142,79 +142,133 @@ class CORTADO_EM:
         
         return clusters
     
-    def _marker_selection_step(
-        self, 
-        adata,
-        clusters: np.ndarray
-    ) -> List[str]:
+    def _marker_selection_step(self, adata, clusters: np.ndarray) -> List[str]:
         """
         M-step: Select markers using CORTADO for each cluster
         """
-        # Add clusters to adata
-        adata.obs['em_clusters'] = pd.Categorical(clusters)
-        
+        import numpy as np
+        import pandas as pd
+        import cortado_marker as cortado
+
+        # 1) Put EM clusters into a column CORTADO definitely knows (fallback)
+        #    Also standardize to string categories to keep comparisons simple.
+        adata = adata.copy()  # avoid views
+        em_name = "em_clusters"
+        adata.obs[em_name] = pd.Categorical(clusters.astype(str))
+        # Fallback/compat: many functions expect 'clust_assign'
+        adata.obs["clust_assign"] = adata.obs[em_name]
+
         all_markers = []
-        
+        min_cells = 15  # skip tiny clusters to avoid unstable DE
+
         for cluster_id in np.unique(clusters):
             if self.verbose:
                 print(f"  M-step: Selecting markers for cluster {cluster_id}...", end="")
-            
+
+            # Ensure we're selecting by the SAME string representation
+            cid = str(cluster_id)
+            n_in = (adata.obs[em_name] == cid).sum()
+            n_out = adata.n_obs - n_in
+            if n_in < min_cells or n_out < min_cells:
+                if self.verbose:
+                    print(f" Skipped (too few cells: in={n_in}, out={n_out})")
+                continue
+
             try:
-                # Use existing CORTADO functions
-                # Step 1: Get DE scores
+                # ---- Step 1: DE prefilter (avoid use_raw=True unless you know adata.raw is raw counts) ----
                 marker_scores = cortado.calc_marker_gene_score(
                     adata,
-                    target_cluster=cluster_id,
-                    n_genes=50,  # Pre-filter to top 50 DE genes
-                    p_val_threshold=0.05,
-                    use_raw=True,
-                    cluster_column='em_clusters'  # Use our EM clusters
+                    target_cluster=cid,
+                    n_genes=50,           # candidate cap
+                    p_val_threshold=0.10, # relax a bit to avoid empty sets
+                    use_raw=False,        # safer default given your log warning
+                    # If your branch accepts cluster_column, keep it:
+                    # cluster_column=em_name
                 )
-                
-                # Step 2: Calculate similarity matrix
+
+                # Normalize to DF with the expected column
+                if isinstance(marker_scores, pd.Series):
+                    marker_scores = pd.DataFrame({"marker_score": marker_scores})
+                elif isinstance(marker_scores, pd.DataFrame):
+                    if marker_scores.shape[1] == 1 and "marker_score" not in marker_scores.columns:
+                        marker_scores = marker_scores.rename(columns={marker_scores.columns[0]: "marker_score"})
+                    elif "marker_score" not in marker_scores.columns:
+                        # If your scorer returns multiple columns, pick/compute the main one here:
+                        # e.g., marker_scores["marker_score"] = marker_scores["score"] or similar
+                        raise ValueError("marker_scores DF must include 'marker_score' column.")
+                else:
+                    raise TypeError("marker_scores must be a pandas Series or DataFrame")
+
+                # Drop NaN/inf and sort
+                ms_before = len(marker_scores)
+                marker_scores = marker_scores.replace([np.inf, -np.inf], np.nan).dropna(subset=["marker_score"])
+                marker_scores = marker_scores.sort_values("marker_score", ascending=False)
+
+                if marker_scores.empty:
+                    if self.verbose:
+                        print(f" Failed: no DE genes (after filtering from {ms_before})")
+                    continue
+
+                # ---- Step 2: Correlation/similarity on same cluster label ----
                 sim_scores = cortado.gene_correlation_within_cluster(
-                    cluster_id, 
+                    cid,
                     adata,
-                    cluster_column='em_clusters'
+                    # cluster_column=em_name  # if supported
                 )
-                
-                # Step 3: Filter to candidate genes
+                # Filter to candidate genes + enforce order
                 filtered_genes = marker_scores.index
-                filtered_corr_matrix = sim_scores.loc[filtered_genes, filtered_genes]
-                
-                # Step 4: Run hill climbing
+                sim_idx = sim_scores.index
+                missing = [g for g in filtered_genes if g not in sim_idx]
+                if missing and self.verbose:
+                    print(f" (warn: {len(missing)} genes missing in corr) ", end="")
+                filtered_corr_matrix = sim_scores.loc[filtered_genes.intersection(sim_idx), filtered_genes.intersection(sim_idx)]
+                # Re-align marker_scores to what remains in the corr matrix
+                kept = filtered_corr_matrix.index
+                marker_scores = marker_scores.loc[kept]
+                # Final alignment check
+                if marker_scores.empty or filtered_corr_matrix.empty:
+                    if self.verbose:
+                        print(" Failed: empty after corr alignment")
+                    continue
+
+                # ---- Step 3: Hill-climbing with safe how_many ----
+                nGenes = len(marker_scores)
+                how_many = min(self.n_markers_per_cluster, nGenes)
+                if how_many == 0:
+                    if self.verbose:
+                        print(" Failed: how_many==0")
+                    continue
+
                 best_solution, best_value = cortado.run_stochastic_hill_climbing(
-                    marker_scores,
-                    filtered_corr_matrix,
-                    how_many=self.n_markers_per_cluster,
-                    max_iterations=500,  # Fewer iterations for speed
-                    gamma=0.5,
+                    marker_scores,                # DF with 'marker_score'
+                    filtered_corr_matrix,         # square DF aligned to marker_scores.index
+                    how_many=how_many,
+                    max_iterations=300,           # tweak as you like
+                    gamma=0.7,
                     idle_limit=20,
                     lambda1=0.9,
                     lambda2=0.1,
-                    lambda3=0.0,  # No sparsity penalty within clusters
-                    mode=1,  # Constrained mode
-                    plot_filename=""  # No plotting during EM
+                    lambda3=0.0,
+                    mode=1,
+                    plot_filename=""
                 )
-                
-                # Extract selected genes
-                cluster_markers = marker_scores.index[best_solution == 1].tolist()
+
+                sel = np.asarray(best_solution).reshape(-1)
+                cluster_markers = marker_scores.index[sel == 1].tolist()
                 all_markers.extend(cluster_markers)
-                
+
                 if self.verbose:
                     print(f" {len(cluster_markers)} markers selected")
-                    
+
             except Exception as e:
                 if self.verbose:
-                    print(f" Failed: {str(e)}")
+                    print(f" Failed: {e}")
                 continue
-        
-        # Remove duplicates while preserving order
+
+        # Deduplicate preserving order
         unique_markers = list(dict.fromkeys(all_markers))
-        
         if self.verbose:
             print(f"  M-step: Total {len(unique_markers)} unique markers selected")
-        
         return unique_markers
 
 
