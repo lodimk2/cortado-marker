@@ -23,7 +23,6 @@ def obj(X, nGenes, lambda1, lambda2, lambda3, marker_scores, sim_scores):
 
     return c1 + c2 + c3
 
-
 def stochastic_hill_climbing_adaptive(
     f,
     initial_solution,
@@ -38,6 +37,7 @@ def stochastic_hill_climbing_adaptive(
     marker_scores,
     sim_scores,
     mode,
+    n_flips=1,       # ← ADD
     verbose=True
 ):
     """
@@ -45,37 +45,34 @@ def stochastic_hill_climbing_adaptive(
     """
     current_solution = initial_solution
     current_value = f(current_solution, nGenes, lambda1, lambda2, lambda3, marker_scores, sim_scores)
-
     t = 0
     idle_steps = 0
     best_solution = current_solution
     best_value = current_value
 
     while t < max_iterations and idle_steps < idle_limit:
-
         exploration_rate = gamma ** t
         if verbose:
             print(f'At time {t}, the best value is {best_value}, with an exploration rate of {exploration_rate}.')
-
         Log.append(best_value)
         t += 1
 
-        neighbors = [get_neighbor(current_solution, mode) for _ in range(how_many_neighbors)]
+        neighbors = [get_neighbor(current_solution, mode, n_flips=n_flips)   # ← ADD n_flips
+                     for _ in range(how_many_neighbors)]
 
         if random.uniform(0, 1) < exploration_rate:
             ind = random.choice([i for i in range(how_many_neighbors)])
             current_solution, current_value = neighbors[ind], f(neighbors[ind], nGenes, lambda1, lambda2, lambda3, marker_scores, sim_scores)
             continue
 
-        neighbor_values = [f(neighbor, nGenes, lambda1, lambda2, lambda3, marker_scores, sim_scores) for neighbor in neighbors]
-
-        better_neighbors = [(neighbors[i], neighbor_values[i]) for i in range(len(neighbors)) if
-                            neighbor_values[i] > current_value]
+        neighbor_values = [f(neighbor, nGenes, lambda1, lambda2, lambda3, marker_scores, sim_scores)
+                           for neighbor in neighbors]
+        better_neighbors = [(neighbors[i], neighbor_values[i]) for i in range(len(neighbors))
+                            if neighbor_values[i] > current_value]
 
         if better_neighbors:
             ind = random.choice([i for i in range(how_many_neighbors)])
             current_solution, current_value = neighbors[ind], f(neighbors[ind], nGenes, lambda1, lambda2, lambda3, marker_scores, sim_scores)
-
             if current_value > best_value:
                 best_solution, best_value = current_solution, current_value
             idle_steps = 0
@@ -93,6 +90,7 @@ def run_stochastic_hill_climbing(
     gamma=0.95,
     idle_limit=10,
     how_many_neighbors=10,
+    n_flips=1,           # ← ADD
     lambda1=0.7,
     lambda2=0.2,
     lambda3=0.1,
@@ -105,7 +103,6 @@ def run_stochastic_hill_climbing(
     """
     nGenes = len(marker_scores)
 
-    # Initialize solution
     if mode == 0:
         initial_solution = np.random.randint(2, size=nGenes)
     else:
@@ -114,18 +111,17 @@ def run_stochastic_hill_climbing(
     if verbose:
         print("Initial solution:", initial_solution)
 
-    # Initialize logging for the cost function values
     global Log
     Log = []
 
-    # Run the hill-climbing algorithm
     best_solution, best_value = stochastic_hill_climbing_adaptive(
         obj, initial_solution, max_iterations, gamma, idle_limit,
-        10, nGenes, lambda1, lambda2, lambda3, marker_scores, filtered_corr_matrix, mode,
+        how_many_neighbors,   # ← was hardcoded 10, now uses the parameter
+        nGenes, lambda1, lambda2, lambda3, marker_scores, filtered_corr_matrix, mode,
+        n_flips=n_flips,      # ← ADD
         verbose=verbose
     )
 
-    # Plot the cost function and save the plot (optional)
     if plot_filename:
         plt.plot([i for i in range(len(Log))], Log)
         plt.xlabel('Iteration')
