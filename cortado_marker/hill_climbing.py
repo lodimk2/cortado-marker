@@ -50,7 +50,7 @@ def stochastic_hill_climbing_adaptive(
     max_iterations,
     gamma,
     idle_limit,
-    how_many_neighbors,   # ← was hardcoded 10 in run_stochastic_hill_climbing
+    how_many_neighbors,
     nGenes,
     lambda1,
     lambda2,
@@ -58,13 +58,16 @@ def stochastic_hill_climbing_adaptive(
     marker_scores,
     sim_scores,
     mode,
-    n_flips=1,            # ← new
-    verbose=False,        # ← new
+    n_flips=1,
+    verbose=False,
+    neighbor_mode="standard",   # ← "standard" or "grouped"
+    n_groups=4,                 # ← only used when neighbor_mode="grouped"
 ):
     """
-    Stochastic hill climbing with adaptive exploration reduction.
+    neighbor_mode="standard" : evaluate how_many_neighbors candidates per iteration (original)
+    neighbor_mode="grouped"  : partition how_many_neighbors into n_groups buckets,
+                               evaluate one rep per bucket (faster, fewer obj calls)
     """
-    # ── Precompute once, pass arrays to obj instead of DataFrames ────────────
     sig_marker, sig_sim = precompute(marker_scores, sim_scores)
 
     current_solution = initial_solution.copy()
@@ -85,11 +88,17 @@ def stochastic_hill_climbing_adaptive(
         log.append(best_value)
         t += 1
 
+        # ── Generate neighbors ───────────────────────────────────────────────
         neighbors = [get_neighbor(current_solution, mode, n_flips=n_flips)
                      for _ in range(how_many_neighbors)]
 
+        # ── Reduce to group representatives if grouped mode ──────────────────
+        if neighbor_mode == "grouped":
+            neighbors = _get_group_representatives(neighbors, n_groups)
+
+        # ── Explore vs exploit ───────────────────────────────────────────────
         if random.uniform(0, 1) < exploration_rate:
-            idx              = random.randrange(how_many_neighbors)
+            idx              = random.randrange(len(neighbors))
             current_solution = neighbors[idx]
             current_value    = f(current_solution, nGenes, lambda1, lambda2,
                                  lambda3, sig_marker, sig_sim)
@@ -97,8 +106,7 @@ def stochastic_hill_climbing_adaptive(
 
         neighbor_values = [f(n, nGenes, lambda1, lambda2, lambda3,
                              sig_marker, sig_sim) for n in neighbors]
-
-        better = [i for i in range(how_many_neighbors)
+        better = [i for i in range(len(neighbors))
                   if neighbor_values[i] > current_value]
 
         if better:
@@ -115,6 +123,23 @@ def stochastic_hill_climbing_adaptive(
     return best_solution, best_value, log
 
 
+def _get_group_representatives(neighbors, n_groups):
+    """
+    Partition neighbors into n_groups buckets by popcount (number of selected genes).
+    Returns one random representative per non-empty bucket.
+    """
+    if not neighbors:
+        return neighbors
+
+    max_bits = len(neighbors[0])
+    buckets  = {}
+    for n in neighbors:
+        bucket = min(int(n.sum() * n_groups / (max_bits + 1)), n_groups - 1)
+        buckets.setdefault(bucket, []).append(n)
+
+    return [random.choice(members) for members in buckets.values()]
+
+
 def run_stochastic_hill_climbing(
     marker_scores,
     filtered_corr_matrix,
@@ -122,18 +147,17 @@ def run_stochastic_hill_climbing(
     max_iterations=100,
     gamma=0.95,
     idle_limit=10,
-    how_many_neighbors=10,  # ← new (was hardcoded)
-    n_flips=1,              # ← new
+    how_many_neighbors=10,
+    n_flips=1,
     lambda1=0.7,
     lambda2=0.2,
     lambda3=0.1,
     mode=1,
     plot_filename='cost_plot.png',
-    verbose=False,          # ← default off now (was always printing)
+    verbose=False,
+    neighbor_mode="standard",   # ← "standard" or "grouped"
+    n_groups=4,                 # ← only used when neighbor_mode="grouped"
 ):
-    """
-    Run stochastic hill climbing algorithm.
-    """
     nGenes = len(marker_scores)
 
     if mode == 0:
@@ -143,6 +167,9 @@ def run_stochastic_hill_climbing(
 
     if verbose:
         print("Initial solution:", initial_solution)
+        print(f"neighbor_mode={neighbor_mode}" +
+              (f"  n_groups={n_groups}" if neighbor_mode == "grouped" else
+               f"  how_many_neighbors={how_many_neighbors}"))
 
     best_solution, best_value, log = stochastic_hill_climbing_adaptive(
         obj,
@@ -150,7 +177,7 @@ def run_stochastic_hill_climbing(
         max_iterations,
         gamma,
         idle_limit,
-        how_many_neighbors,   # ← was hardcoded 10
+        how_many_neighbors,
         nGenes,
         lambda1,
         lambda2,
@@ -160,6 +187,8 @@ def run_stochastic_hill_climbing(
         mode,
         n_flips=n_flips,
         verbose=verbose,
+        neighbor_mode=neighbor_mode,
+        n_groups=n_groups,
     )
 
     if plot_filename:
@@ -169,8 +198,6 @@ def run_stochastic_hill_climbing(
         plt.title('Cost Function Over Iterations')
         plt.savefig(plot_filename)
         plt.close()
-        if verbose:
-            print(f"Cost plot saved as {plot_filename}")
 
     if verbose:
         print("Best Solution:", best_solution)
