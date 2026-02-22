@@ -92,6 +92,7 @@ def run_stochastic_hill_climbing(
     max_iterations=100,
     gamma=0.95,
     idle_limit=10,
+    how_many_neighbors=10,
     lambda1=0.7,
     lambda2=0.2,
     lambda3=0.1,
