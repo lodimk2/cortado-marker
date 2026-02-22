@@ -29,25 +29,42 @@ def create_binary_vector(length, num_ones):
     return binary_vector
 
 
-def get_neighbor(solution, mode):
+def get_neighbor(solution, mode, n_flips=1):
     """
     Get a neighbor of a given binary vector.
 
-    Parameters:
-    - solution (np.array): Binary vector
-    - mode (int): Mode for generating neighbor
+    Parameters
+    ----------
+    solution : np.array
+        Binary vector representing the current selection.
+    mode : int
+        0 – free flipping: flip n_flips random bits with no constraint.
+        1 – balance-preserving: each flip is immediately compensated by
+            flipping a second bit of the same new value, keeping the total
+            number of selected genes approximately stable.
+    n_flips : int
+        Number of bit-flip operations to perform (default 1, matching
+        original behaviour).
 
-    Returns:
-    - np.array: Neighbor binary vector
+    Returns
+    -------
+    np.array
+        Neighbour binary vector.
     """
     neighbor = solution.copy()
-    flip_index = random.randint(0, len(solution) - 1)
-    neighbor[flip_index] = 1 - neighbor[flip_index]  # Flip the bit
 
-    new_Bit = neighbor[flip_index]
-    if mode == 1:
-        indices = [i for i in range(len(neighbor)) if neighbor[i] == new_Bit]
-        flip_index = random.choice(indices)
-        neighbor[flip_index] = 1 - neighbor[flip_index]
+    for _ in range(n_flips):
+        flip_index = random.randint(0, len(neighbor) - 1)
+        neighbor[flip_index] = 1 - neighbor[flip_index]   # primary flip
+
+        if mode == 1:
+            new_bit = neighbor[flip_index]
+            # Compensating flip: pick another bit with the same new value
+            # (excludes the just-flipped index to avoid immediately undoing it)
+            candidates = [i for i in range(len(neighbor))
+                          if neighbor[i] == new_bit and i != flip_index]
+            if candidates:
+                compensate_index = random.choice(candidates)
+                neighbor[compensate_index] = 1 - neighbor[compensate_index]
 
     return neighbor
