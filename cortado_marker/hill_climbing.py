@@ -26,37 +26,17 @@ def obj(X, nGenes, lambda1, lambda2, lambda3, sig_marker, sig_sim):
 
 
 def _generate_local_group_representatives(current_solution, K, mode, n_flips, max_attempts=1000):
-    """
-    Collaborator's approach: combine local search with group partitioning.
-
-    Starting from current_solution:
-      1. Flip bits to get a candidate b'  (local perturbation)
-      2. Map b' to its group G(b') via integer value
-      3. If G(b') is unoccupied, keep b' as that group's representative
-      4. Skip if group already occupied — no obj call needed
-      5. Repeat until all K groups have a representative or max_attempts reached
-
-    This preserves local search (neighbors are perturbations of current solution)
-    while guaranteeing diverse coverage (one rep per region of search space).
-    Only K obj calls are made regardless of how many perturbations were generated.
-    """
-    n          = len(current_solution)
+    
+    n = len(current_solution)
     total_bits = 2 ** n
-    groups     = {}
-    attempts   = 0
+    groups = {}
+    attempts = 0
 
     while len(groups) < K and attempts < max_attempts:
         attempts += 1
-
-        # ── Local perturbation of current solution ───────────────
-        b     = get_neighbor(current_solution, mode, n_flips=n_flips)
-        b_int = int(''.join(b.astype(str)), 2)
-
-        # ── Map to group ─────────────────────────────────────────
-        g = int((b_int / total_bits) * K)
-        g = min(g, K - 1)   # guard against edge case b_int == total_bits
-
-        # ── Keep only if group is unoccupied ─────────────────────
+        b = get_neighbor(current_solution, mode, n_flips=n_flips)
+        b_int = b.dot(1 << np.arange(n)[::-1])  # faster than string join
+        g = min(int((b_int / total_bits) * K), K - 1)
         if g not in groups:
             groups[g] = b
 
