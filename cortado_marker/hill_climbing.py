@@ -1,27 +1,48 @@
 import numpy as np
 import random
-import math
 import matplotlib.pyplot as plt
-from .utils import (
-    sigmoid,
-    create_binary_vector,
-    get_neighbor
-)
+from .utils import sigmoid, create_binary_vector, get_neighbor
 
-def obj(X, nGenes, lambda1, lambda2, lambda3, marker_scores, sim_scores):
+
+def precompute(marker_scores, sim_scores):
     """
-    Objective function for stochastic hill climbing.
+    Pre-compute sigmoid arrays once before the hill-climbing loop.
+    Avoids redundant pandas indexing and sigmoid calls inside obj.
     """
-    c1 = lambda1 * (np.sum([X[g] * sigmoid(marker_scores.iloc[g]['marker_score']) for g in range(nGenes)]) / nGenes)
+    sig_marker = sigmoid(marker_scores["marker_score"].values)  # (nGenes,)
+    sig_sim    = sigmoid(sim_scores.values)                      # (nGenes, nGenes)
+    return sig_marker, sig_sim
 
-    c2 = -2 * lambda2 * (np.sum([X[g1] * X[g2] * sigmoid(sim_scores.iloc[g1, g2])
-                                 for g1 in range(nGenes - 1)
-                                 for g2 in range(g1 + 1, nGenes)]) /
-                         (np.sum([X[g] for g in range(nGenes)]) * (np.sum([X[g] for g in range(nGenes)]) - 1) + 1))
 
-    c3 = -lambda3 * (np.sum([X[g] for g in range(nGenes)]) / nGenes)
+def obj(X, nGenes, lambda1, lambda2, lambda3, sig_marker, sig_sim):
+    """
+    Vectorized objective function.
+
+    Parameters:
+    - X (np.array): Binary vector
+    - nGenes (int): Number of genes
+    - lambda1 (float): Weight for marker gene score
+    - lambda2 (float): Weight for similarity score
+    - lambda3 (float): Weight for gene set size
+    - sig_marker (np.array): Pre-computed sigmoid of marker scores  ← changed
+    - sig_sim (np.array): Pre-computed sigmoid of sim scores        ← changed
+
+    Returns:
+    - float: Objective function value
+    """
+    n_selected = X.sum()
+
+    c1 = lambda1 * np.dot(X, sig_marker) / nGenes
+
+    outer = np.outer(X, X)
+    np.fill_diagonal(outer, 0)
+    c2 = -2 * lambda2 * (np.sum(outer * sig_sim) / 2) / \
+         (n_selected * (n_selected - 1) + 1)
+
+    c3 = -lambda3 * n_selected / nGenes
 
     return c1 + c2 + c3
+
 
 def stochastic_hill_climbing_adaptive(
     f,
@@ -37,49 +58,86 @@ def stochastic_hill_climbing_adaptive(
     marker_scores,
     sim_scores,
     mode,
-    n_flips=1,       # ← ADD
-    verbose=True
+    n_flips=1,
+    verbose=False,
+    neighbor_mode="standard",   # ← "standard" or "grouped"
+    n_groups=4,                 # ← only used when neighbor_mode="grouped"
 ):
     """
-    Stochastic hill climbing algorithm with adaptive exploration reduction.
+    neighbor_mode="standard" : evaluate how_many_neighbors candidates per iteration (original)
+    neighbor_mode="grouped"  : partition how_many_neighbors into n_groups buckets,
+                               evaluate one rep per bucket (faster, fewer obj calls)
     """
-    current_solution = initial_solution
-    current_value = f(current_solution, nGenes, lambda1, lambda2, lambda3, marker_scores, sim_scores)
-    t = 0
-    idle_steps = 0
-    best_solution = current_solution
-    best_value = current_value
+    sig_marker, sig_sim = precompute(marker_scores, sim_scores)
+
+    current_solution = initial_solution.copy()
+    current_value    = f(current_solution, nGenes, lambda1, lambda2, lambda3,
+                         sig_marker, sig_sim)
+    best_solution    = current_solution.copy()
+    best_value       = current_value
+    log              = []
+    t                = 0
+    idle_steps       = 0
 
     while t < max_iterations and idle_steps < idle_limit:
         exploration_rate = gamma ** t
+
         if verbose:
-            print(f'At time {t}, the best value is {best_value}, with an exploration rate of {exploration_rate}.')
-        Log.append(best_value)
+            print(f"t={t}  best={best_value:.6f}  exploration={exploration_rate:.4f}")
+
+        log.append(best_value)
         t += 1
 
-        neighbors = [get_neighbor(current_solution, mode, n_flips=n_flips)   # ← ADD n_flips
+        # ── Generate neighbors ───────────────────────────────────────────────
+        neighbors = [get_neighbor(current_solution, mode, n_flips=n_flips)
                      for _ in range(how_many_neighbors)]
 
+        # ── Reduce to group representatives if grouped mode ──────────────────
+        if neighbor_mode == "grouped":
+            neighbors = _get_group_representatives(neighbors, n_groups)
+
+        # ── Explore vs exploit ───────────────────────────────────────────────
         if random.uniform(0, 1) < exploration_rate:
-            ind = random.choice([i for i in range(how_many_neighbors)])
-            current_solution, current_value = neighbors[ind], f(neighbors[ind], nGenes, lambda1, lambda2, lambda3, marker_scores, sim_scores)
+            idx              = random.randrange(len(neighbors))
+            current_solution = neighbors[idx]
+            current_value    = f(current_solution, nGenes, lambda1, lambda2,
+                                 lambda3, sig_marker, sig_sim)
             continue
 
-        neighbor_values = [f(neighbor, nGenes, lambda1, lambda2, lambda3, marker_scores, sim_scores)
-                           for neighbor in neighbors]
-        better_neighbors = [(neighbors[i], neighbor_values[i]) for i in range(len(neighbors))
-                            if neighbor_values[i] > current_value]
+        neighbor_values = [f(n, nGenes, lambda1, lambda2, lambda3,
+                             sig_marker, sig_sim) for n in neighbors]
+        better = [i for i in range(len(neighbors))
+                  if neighbor_values[i] > current_value]
 
-        if better_neighbors:
-            ind = random.choice([i for i in range(how_many_neighbors)])
-            current_solution, current_value = neighbors[ind], f(neighbors[ind], nGenes, lambda1, lambda2, lambda3, marker_scores, sim_scores)
+        if better:
+            idx              = random.choice(better)
+            current_solution = neighbors[idx]
+            current_value    = neighbor_values[idx]
             if current_value > best_value:
-                best_solution, best_value = current_solution, current_value
+                best_solution = current_solution.copy()
+                best_value    = current_value
             idle_steps = 0
         else:
             idle_steps += 1
 
-    return best_solution, best_value
+    return best_solution, best_value, log
+
+
+def _get_group_representatives(neighbors, n_groups):
+    """
+    Partition neighbors into n_groups buckets by popcount (number of selected genes).
+    Returns one random representative per non-empty bucket.
+    """
+    if not neighbors:
+        return neighbors
+
+    max_bits = len(neighbors[0])
+    buckets  = {}
+    for n in neighbors:
+        bucket = min(int(n.sum() * n_groups / (max_bits + 1)), n_groups - 1)
+        buckets.setdefault(bucket, []).append(n)
+
+    return [random.choice(members) for members in buckets.values()]
 
 
 def run_stochastic_hill_climbing(
@@ -90,17 +148,16 @@ def run_stochastic_hill_climbing(
     gamma=0.95,
     idle_limit=10,
     how_many_neighbors=10,
-    n_flips=1,           # ← ADD
+    n_flips=1,
     lambda1=0.7,
     lambda2=0.2,
     lambda3=0.1,
     mode=1,
     plot_filename='cost_plot.png',
-    verbose=True
+    verbose=False,
+    neighbor_mode="standard",   # ← "standard" or "grouped"
+    n_groups=4,                 # ← only used when neighbor_mode="grouped"
 ):
-    """
-    Run stochastic hill climbing algorithm.
-    """
     nGenes = len(marker_scores)
 
     if mode == 0:
@@ -110,27 +167,37 @@ def run_stochastic_hill_climbing(
 
     if verbose:
         print("Initial solution:", initial_solution)
+        print(f"neighbor_mode={neighbor_mode}" +
+              (f"  n_groups={n_groups}" if neighbor_mode == "grouped" else
+               f"  how_many_neighbors={how_many_neighbors}"))
 
-    global Log
-    Log = []
-
-    best_solution, best_value = stochastic_hill_climbing_adaptive(
-        obj, initial_solution, max_iterations, gamma, idle_limit,
-        how_many_neighbors,   # ← was hardcoded 10, now uses the parameter
-        nGenes, lambda1, lambda2, lambda3, marker_scores, filtered_corr_matrix, mode,
-        n_flips=n_flips,      # ← ADD
-        verbose=verbose
+    best_solution, best_value, log = stochastic_hill_climbing_adaptive(
+        obj,
+        initial_solution,
+        max_iterations,
+        gamma,
+        idle_limit,
+        how_many_neighbors,
+        nGenes,
+        lambda1,
+        lambda2,
+        lambda3,
+        marker_scores,
+        filtered_corr_matrix,
+        mode,
+        n_flips=n_flips,
+        verbose=verbose,
+        neighbor_mode=neighbor_mode,
+        n_groups=n_groups,
     )
 
     if plot_filename:
-        plt.plot([i for i in range(len(Log))], Log)
+        plt.plot(range(len(log)), log)
         plt.xlabel('Iteration')
         plt.ylabel('Cost')
         plt.title('Cost Function Over Iterations')
         plt.savefig(plot_filename)
         plt.close()
-        if verbose:
-            print(f"Cost plot saved as {plot_filename}")
 
     if verbose:
         print("Best Solution:", best_solution)
