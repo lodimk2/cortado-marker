@@ -25,23 +25,38 @@ def obj(X, nGenes, lambda1, lambda2, lambda3, sig_marker, sig_sim):
     return c1 + c2 + c3
 
 
-def _generate_bitstring_groups(n, K):
+def _generate_local_group_representatives(current_solution, K, mode, n_flips, max_attempts=1000):
     """
-    Partition the binary search space into K groups and return one
-    representative bitstring (as a numpy array) per group.
+    Collaborator's approach: combine local search with group partitioning.
 
-    Each bitstring is mapped to a group by its integer value relative
-    to the total search space size (2^n), so groups cover equal-sized
-    regions of the space. Only the first bitstring that falls into each
-    empty group is kept — giving K diverse representatives.
+    Starting from current_solution:
+      1. Flip bits to get a candidate b'  (local perturbation)
+      2. Map b' to its group G(b') via integer value
+      3. If G(b') is unoccupied, keep b' as that group's representative
+      4. Skip if group already occupied — no obj call needed
+      5. Repeat until all K groups have a representative or max_attempts reached
+
+    This preserves local search (neighbors are perturbations of current solution)
+    while guaranteeing diverse coverage (one rep per region of search space).
+    Only K obj calls are made regardless of how many perturbations were generated.
     """
-    groups    = {}
+    n          = len(current_solution)
     total_bits = 2 ** n
+    groups     = {}
+    attempts   = 0
 
-    while len(groups) < K:
-        b     = np.random.randint(0, 2, size=n)
+    while len(groups) < K and attempts < max_attempts:
+        attempts += 1
+
+        # ── Local perturbation of current solution ───────────────
+        b     = get_neighbor(current_solution, mode, n_flips=n_flips)
         b_int = int(''.join(b.astype(str)), 2)
-        g     = min(int((b_int / total_bits) * K), K - 1)
+
+        # ── Map to group ─────────────────────────────────────────
+        g = int((b_int / total_bits) * K)
+        g = min(g, K - 1)   # guard against edge case b_int == total_bits
+
+        # ── Keep only if group is unoccupied ─────────────────────
         if g not in groups:
             groups[g] = b
 
@@ -68,9 +83,9 @@ def stochastic_hill_climbing_adaptive(
     n_groups=8,                 # only used when neighbor_mode="partitioned"
 ):
     """
-    neighbor_mode="standard"    : evaluate how_many_neighbors random neighbors per iteration
-    neighbor_mode="partitioned" : generate K representative neighbors via bitstring group
-                                  partitioning (one per region of the search space)
+    neighbor_mode="standard"    : evaluate how_many_neighbors random perturbations per iteration
+    neighbor_mode="partitioned" : perturb current solution locally, keep one rep per group,
+                                  evaluate obj only on K group representatives
     """
     sig_marker, sig_sim = precompute(marker_scores, sim_scores)
 
@@ -94,10 +109,12 @@ def stochastic_hill_climbing_adaptive(
 
         # ── Generate neighbors ───────────────────────────────────────────────
         if neighbor_mode == "partitioned":
-            # K representatives spread across the binary search space
-            neighbors = _generate_bitstring_groups(nGenes, n_groups)
+            # Local perturbations deduplicated by group — K obj calls max
+            neighbors = _generate_local_group_representatives(
+                current_solution, n_groups, mode, n_flips
+            )
         else:
-            # Original: how_many_neighbors random perturbations of current solution
+            # Original: how_many_neighbors random perturbations
             neighbors = [get_neighbor(current_solution, mode, n_flips=n_flips)
                          for _ in range(how_many_neighbors)]
 
