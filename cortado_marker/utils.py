@@ -1,17 +1,9 @@
 import math
 import numpy as np
 import random
+
 def sigmoid(x):
-    """
-    Sigmoid function.
-
-    Parameters:
-    - x (float): Input value
-
-    Returns:
-    - float: Sigmoid output
-    """
-    return 1 / (1 + math.exp(-x))
+    return 1 / (1 + np.exp(-x))
 
 def create_binary_vector(length, num_ones):
     """
