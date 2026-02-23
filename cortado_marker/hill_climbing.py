@@ -5,31 +5,12 @@ from .utils import sigmoid, create_binary_vector, get_neighbor
 
 
 def precompute(marker_scores, sim_scores):
-    """
-    Pre-compute sigmoid arrays once before the hill-climbing loop.
-    Avoids redundant pandas indexing and sigmoid calls inside obj.
-    """
-    sig_marker = sigmoid(marker_scores["marker_score"].values)  # (nGenes,)
-    sig_sim    = sigmoid(sim_scores.values)                      # (nGenes, nGenes)
+    sig_marker = sigmoid(marker_scores["marker_score"].values)
+    sig_sim    = sigmoid(sim_scores.values)
     return sig_marker, sig_sim
 
 
 def obj(X, nGenes, lambda1, lambda2, lambda3, sig_marker, sig_sim):
-    """
-    Vectorized objective function.
-
-    Parameters:
-    - X (np.array): Binary vector
-    - nGenes (int): Number of genes
-    - lambda1 (float): Weight for marker gene score
-    - lambda2 (float): Weight for similarity score
-    - lambda3 (float): Weight for gene set size
-    - sig_marker (np.array): Pre-computed sigmoid of marker scores
-    - sig_sim (np.array): Pre-computed sigmoid of sim scores
-
-    Returns:
-    - float: Objective function value
-    """
     n_selected = X.sum()
 
     c1 = lambda1 * np.dot(X, sig_marker) / nGenes
@@ -42,6 +23,29 @@ def obj(X, nGenes, lambda1, lambda2, lambda3, sig_marker, sig_sim):
     c3 = -lambda3 * n_selected / nGenes
 
     return c1 + c2 + c3
+
+
+def _generate_bitstring_groups(n, K):
+    """
+    Partition the binary search space into K groups and return one
+    representative bitstring (as a numpy array) per group.
+
+    Each bitstring is mapped to a group by its integer value relative
+    to the total search space size (2^n), so groups cover equal-sized
+    regions of the space. Only the first bitstring that falls into each
+    empty group is kept — giving K diverse representatives.
+    """
+    groups    = {}
+    total_bits = 2 ** n
+
+    while len(groups) < K:
+        b     = np.random.randint(0, 2, size=n)
+        b_int = int(''.join(b.astype(str)), 2)
+        g     = min(int((b_int / total_bits) * K), K - 1)
+        if g not in groups:
+            groups[g] = b
+
+    return list(groups.values())
 
 
 def stochastic_hill_climbing_adaptive(
@@ -60,7 +64,14 @@ def stochastic_hill_climbing_adaptive(
     mode,
     n_flips=1,
     verbose=False,
+    neighbor_mode="standard",   # "standard" or "partitioned"
+    n_groups=8,                 # only used when neighbor_mode="partitioned"
 ):
+    """
+    neighbor_mode="standard"    : evaluate how_many_neighbors random neighbors per iteration
+    neighbor_mode="partitioned" : generate K representative neighbors via bitstring group
+                                  partitioning (one per region of the search space)
+    """
     sig_marker, sig_sim = precompute(marker_scores, sim_scores)
 
     current_solution = initial_solution.copy()
@@ -81,9 +92,16 @@ def stochastic_hill_climbing_adaptive(
         log.append(best_value)
         t += 1
 
-        neighbors = [get_neighbor(current_solution, mode, n_flips=n_flips)
-                     for _ in range(how_many_neighbors)]
+        # ── Generate neighbors ───────────────────────────────────────────────
+        if neighbor_mode == "partitioned":
+            # K representatives spread across the binary search space
+            neighbors = _generate_bitstring_groups(nGenes, n_groups)
+        else:
+            # Original: how_many_neighbors random perturbations of current solution
+            neighbors = [get_neighbor(current_solution, mode, n_flips=n_flips)
+                         for _ in range(how_many_neighbors)]
 
+        # ── Explore vs exploit ───────────────────────────────────────────────
         if random.uniform(0, 1) < exploration_rate:
             idx              = random.randrange(len(neighbors))
             current_solution = neighbors[idx]
@@ -125,6 +143,8 @@ def run_stochastic_hill_climbing(
     mode=1,
     plot_filename='cost_plot.png',
     verbose=False,
+    neighbor_mode="standard",   # "standard" or "partitioned"
+    n_groups=8,                 # only used when neighbor_mode="partitioned"
 ):
     nGenes = len(marker_scores)
 
@@ -135,6 +155,9 @@ def run_stochastic_hill_climbing(
 
     if verbose:
         print("Initial solution:", initial_solution)
+        print(f"neighbor_mode={neighbor_mode}" +
+              (f"  n_groups={n_groups}" if neighbor_mode == "partitioned"
+               else f"  how_many_neighbors={how_many_neighbors}"))
 
     best_solution, best_value, log = stochastic_hill_climbing_adaptive(
         obj,
@@ -152,6 +175,8 @@ def run_stochastic_hill_climbing(
         mode,
         n_flips=n_flips,
         verbose=verbose,
+        neighbor_mode=neighbor_mode,
+        n_groups=n_groups,
     )
 
     if plot_filename:
